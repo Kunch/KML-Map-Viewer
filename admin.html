@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin – KML Map Viewer</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background: #0f0f23;
+      color: #dde;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: #1a1a2e;
+      padding: 15px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2px solid #e94560;
+    }
+    header h1 { font-size: 19px; color: #e94560; }
+    .back-link { color: rgba(255,255,255,.55); text-decoration: none; font-size: 14px; }
+    .back-link:hover { color: #fff; }
+
+    /* ── Layout ── */
+    .container { max-width: 780px; margin: 0 auto; padding: 22px 20px 40px; }
+
+    /* ── Card ── */
+    .card {
+      background: #1a1a2e;
+      border-radius: 12px;
+      padding: 22px;
+      margin-bottom: 18px;
+      border: 1px solid rgba(255,255,255,.05);
+    }
+    .card h2 {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ── Forms ── */
+    label { display: block; font-size: 12px; color: rgba(255,255,255,.5); margin-bottom: 5px; }
+
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 9px 13px;
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 7px;
+      color: #fff;
+      font-size: 14px;
+      margin-bottom: 13px;
+      outline: none;
+      transition: border-color .2s;
+    }
+    input:focus { border-color: #e94560; }
+
+    .hint { font-size: 11px; color: rgba(255,255,255,.35); margin-top: -10px; margin-bottom: 13px; }
+    .hint a { color: #64b5f6; }
+
+    .row { display: flex; gap: 12px; }
+    .row > div { flex: 1; }
+
+    /* ── Buttons ── */
+    .btn {
+      padding: 9px 18px;
+      border: none;
+      border-radius: 7px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all .2s;
+    }
+    .btn-primary  { background: #e94560; color: #fff; width: 100%; }
+    .btn-primary:hover  { background: #c73652; }
+    .btn-primary:disabled { background: #555; cursor: not-allowed; }
+    .btn-danger {
+      background: transparent;
+      color: #ef9a9a;
+      border: 1px solid #ef5350;
+      padding: 4px 10px;
+      font-size: 12px;
+      border-radius: 6px;
+    }
+    .btn-danger:hover { background: #ef5350; color: #fff; }
+
+    /* ── Status ── */
+    .status {
+      padding: 9px 13px;
+      border-radius: 7px;
+      font-size: 13px;
+      margin-top: 11px;
+      display: none;
+    }
+    .status.success { background: rgba(76,175,80,.14); color: #a5d6a7; border: 1px solid rgba(76,175,80,.25); }
+    .status.error   { background: rgba(244,67,54,.14);  color: #ef9a9a; border: 1px solid rgba(244,67,54,.25); }
+    .status.info    { background: rgba(33,150,243,.14); color: #90caf9; border: 1px solid rgba(33,150,243,.25); }
+
+    /* ── Upload area ── */
+    #upload-area {
+      border: 2px dashed rgba(255,255,255,.15);
+      border-radius: 10px;
+      padding: 28px;
+      text-align: center;
+      cursor: pointer;
+      transition: all .2s;
+      margin-bottom: 13px;
+    }
+    #upload-area:hover, #upload-area.drag-over {
+      border-color: #e94560;
+      background: rgba(233,69,96,.05);
+    }
+    #upload-area .icon { font-size: 40px; margin-bottom: 8px; }
+    #upload-area p { color: rgba(255,255,255,.45); font-size: 13px; }
+    #upload-area p.small { font-size: 11px; margin-top: 3px; }
+    #file-input { display: none; }
+
+    /* ── Selected files ── */
+    .sel-file {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 10px;
+      background: rgba(255,255,255,.03);
+      border-radius: 7px;
+      margin-bottom: 6px;
+      font-size: 13px;
+    }
+    .sel-file span.name { flex: 1; }
+    .sel-file span.size { color: rgba(255,255,255,.35); font-size: 11px; }
+
+    /* ── Progress ── */
+    .progress-bar {
+      height: 4px; background: rgba(255,255,255,.08);
+      border-radius: 2px; margin-top: 11px; overflow: hidden; display: none;
+    }
+    .progress-fill {
+      height: 100%; background: #e94560;
+      border-radius: 2px; width: 0%; transition: width .3s;
+    }
+
+    /* ── File list ── */
+    .file-list { list-style: none; }
+    .file-item {
+      display: flex; align-items: center; gap: 11px;
+      padding: 11px 10px;
+      border-radius: 8px;
+      background: rgba(255,255,255,.03);
+      margin-bottom: 7px;
+    }
+    .file-icon { font-size: 20px; width: 28px; text-align: center; flex-shrink: 0; }
+    .file-info { flex: 1; }
+    .file-name { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+    .file-meta { font-size: 11px; color: rgba(255,255,255,.38); }
+
+    /* Hide sections until authed */
+    #upload-section, #files-section { display: none; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>⚙️ Admin Panel</h1>
+  <a href="index.html" class="back-link">← กลับหน้าแผนที่</a>
+</header>
+
+<div class="container">
+
+  <!-- ── Auth ── -->
+  <div class="card" id="auth-section">
+    <h2>🔑 เชื่อมต่อ GitHub</h2>
+
+    <div class="row">
+      <div>
+        <label>GitHub Username</label>
+        <input type="text" id="gh-owner" placeholder="username" />
+      </div>
+      <div>
+        <label>Repository Name</label>
+        <input type="text" id="gh-repo" placeholder="my-map-site" />
+      </div>
+    </div>
+
+    <label>Personal Access Token</label>
+    <input type="password" id="gh-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" />
+    <p class="hint">
+      สร้าง token ได้ที่
+      <a href="https://github.com/settings/tokens/new?scopes=repo&description=KML+Map+Viewer" target="_blank">
+        GitHub → Settings → Tokens (classic)
+      </a>
+      — เลือก scope: <b>repo</b>
+    </p>
+
+    <div class="row">
+      <div>
+        <label>Branch</label>
+        <input type="text" id="gh-branch" value="main" placeholder="main" style="margin-bottom:0" />
+      </div>
+      <div style="display:flex;align-items:flex-end;">
+        <button class="btn btn-primary" onclick="authenticate()">เชื่อมต่อ</button>
+      </div>
+    </div>
+
+    <div class="status" id="auth-status"></div>
+  </div>
+
+  <!-- ── Upload ── -->
+  <div class="card" id="upload-section">
+    <h2>📤 อัพโหลดไฟล์ KML / KMZ</h2>
+
+    <div id="upload-area" onclick="document.getElementById('file-input').click()">
+      <div class="icon">📁</div>
+      <p>คลิกหรือลากไฟล์มาวางที่นี่</p>
+      <p class="small">รองรับ: .kml, .kmz</p>
+      <input type="file" id="file-input" accept=".kml,.kmz" multiple />
+    </div>
+
+    <div id="selected-files"></div>
+
+    <button class="btn btn-primary" id="upload-btn" onclick="uploadFiles()" disabled>
+      อัพโหลด
+    </button>
+
+    <div class="status" id="upload-status"></div>
+    <div class="progress-bar" id="progress-bar">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+  </div>
+
+  <!-- ── File list ── -->
+  <div class="card" id="files-section">
+    <h2>📂 ไฟล์ที่อัพโหลดแล้ว</h2>
+    <ul class="file-list" id="file-list">
+      <li style="color:rgba(255,255,255,.38);font-size:13px;padding:6px 0;">กำลังโหลด…</li>
+    </ul>
+  </div>
+
+</div>
+
+<script src="config.js"></script>
+<script>
+// ════════════════════════════════════════
+//  State
+// ════════════════════════════════════════
+let api      = null;
+let manifest = { files: [] };
+let selected = [];
+
+// ════════════════════════════════════════
+//  GitHub API helper
+// ════════════════════════════════════════
+class GitHubAPI {
+  constructor(token, owner, repo, branch = 'main') {
+    Object.assign(this, { token, owner, repo, branch });
+  }
+
+  async _req(path, method = 'GET', body = null) {
+    const opts = {
+      method,
+      headers: {
+        Authorization:  `token ${this.token}`,
+        Accept:         'application/vnd.github.v3+json',
+        'Content-Type': 'application/json'
+      }
+    };
+    if (body) opts.body = JSON.stringify(body);
+    const res  = await fetch(`https://api.github.com${path}`, opts);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || `HTTP ${res.status}`);
+    return data;
+  }
+
+  getRepo()             { return this._req(`/repos/${this.owner}/${this.repo}`); }
+  getFile(path)         { return this._req(`/repos/${this.owner}/${this.repo}/contents/${path}?ref=${this.branch}`).catch(() => null); }
+  putFile(path, b64, msg, sha) {
+    const body = { message: msg, content: b64, branch: this.branch };
+    if (sha) body.sha = sha;
+    return this._req(`/repos/${this.owner}/${this.repo}/contents/${path}`, 'PUT', body);
+  }
+  delFile(path, sha, msg) {
+    return this._req(`/repos/${this.owner}/${this.repo}/contents/${path}`, 'DELETE',
+      { message: msg, sha, branch: this.branch });
+  }
+}
+
+/* ── Encoding helpers ── */
+function bufToB64(buf) {
+  let s = '';
+  new Uint8Array(buf).forEach(b => s += String.fromCharCode(b));
+  return btoa(s);
+}
+function strToB64(str) {
+  return btoa(unescape(encodeURIComponent(str)));
+}
+
+// ════════════════════════════════════════
+//  Authentication
+// ════════════════════════════════════════
+async function authenticate() {
+  const token  = document.getElementById('gh-token').value.trim();
+  const owner  = document.getElementById('gh-owner').value.trim()  || CONFIG.owner;
+  const repo   = document.getElementById('gh-repo').value.trim()   || CONFIG.repo;
+  const branch = document.getElementById('gh-branch').value.trim() || CONFIG.branch;
+
+  if (!token)  return showStatus('auth-status', 'กรุณาใส่ GitHub Token', 'error');
+  if (!owner || owner === 'YOUR_GITHUB_USERNAME')
+               return showStatus('auth-status', 'กรุณาใส่ GitHub Username', 'error');
+  if (!repo  || repo  === 'YOUR_REPO_NAME')
+               return showStatus('auth-status', 'กรุณาใส่ Repository Name', 'error');
+
+  showStatus('auth-status', 'กำลังตรวจสอบ…', 'info');
+
+  try {
+    api = new GitHubAPI(token, owner, repo, branch);
+    const info = await api.getRepo();
+    sessionStorage.setItem('gh', JSON.stringify({ token, owner, repo, branch }));
+    showStatus('auth-status', `✅ เชื่อมต่อสำเร็จ: ${info.full_name}`, 'success');
+    document.getElementById('upload-section').style.display = 'block';
+    document.getElementById('files-section').style.display  = 'block';
+    await refreshManifest();
+  } catch (err) {
+    showStatus('auth-status', `❌ ล้มเหลว: ${err.message}`, 'error');
+    api = null;
+  }
+}
+
+// ════════════════════════════════════════
+//  File selection
+// ════════════════════════════════════════
+const fileInput  = document.getElementById('file-input');
+const uploadArea = document.getElementById('upload-area');
+
+fileInput.addEventListener('change', () => {
+  selected = Array.from(fileInput.files);
+  renderSelected();
+});
+
+uploadArea.addEventListener('dragover',  e => { e.preventDefault(); uploadArea.classList.add('drag-over'); });
+uploadArea.addEventListener('dragleave', ()  => uploadArea.classList.remove('drag-over'));
+uploadArea.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadArea.classList.remove('drag-over');
+  selected = Array.from(e.dataTransfer.files).filter(f =>
+    /\.(kml|kmz)$/i.test(f.name)
+  );
+  renderSelected();
+});
+
+function renderSelected() {
+  const wrap = document.getElementById('selected-files');
+  const btn  = document.getElementById('upload-btn');
+
+  if (!selected.length) { wrap.innerHTML = ''; btn.disabled = true; return; }
+
+  btn.disabled = false;
+  wrap.innerHTML = selected.map(f => `
+    <div class="sel-file">
+      <span>${/\.kmz$/i.test(f.name) ? '📦' : '🗺️'}</span>
+      <span class="name">${f.name}</span>
+      <span class="size">${(f.size / 1024).toFixed(1)} KB</span>
+    </div>
+  `).join('');
+}
+
+// ════════════════════════════════════════
+//  Upload
+// ════════════════════════════════════════
+async function uploadFiles() {
+  if (!api || !selected.length) return;
+
+  const btn  = document.getElementById('upload-btn');
+  const pBar = document.getElementById('progress-bar');
+  const pFil = document.getElementById('progress-fill');
+  btn.disabled = true;
+  pBar.style.display = 'block';
+  pFil.style.width = '0%';
+  showStatus('upload-status', 'กำลังอัพโหลด…', 'info');
+
+  let ok = 0;
+
+  for (let i = 0; i < selected.length; i++) {
+    const file = selected[i];
+    pFil.style.width = `${(i / selected.length) * 90}%`;
+
+    try {
+      const b64      = bufToB64(await file.arrayBuffer());
+      const filePath = `data/${file.name}`;
+      const existing = await api.getFile(filePath);
+      await api.putFile(filePath, b64, `Upload ${file.name}`, existing?.sha);
+
+      /* Update in-memory manifest */
+      if (!manifest.files.find(f => f.name === file.name)) {
+        manifest.files.push({
+          name: file.name,
+          path: filePath,
+          type: /\.kmz$/i.test(file.name) ? 'kmz' : 'kml',
+          size: file.size,
+          uploadedAt: new Date().toISOString()
+        });
+      }
+      ok++;
+    } catch (err) {
+      console.error(`Upload failed: ${file.name}`, err);
+      showStatus('upload-status', `❌ ${file.name}: ${err.message}`, 'error');
+    }
+  }
+
+  /* Save manifest */
+  try {
+    await saveManifest();
+    pFil.style.width = '100%';
+    showStatus('upload-status', `✅ อัพโหลดสำเร็จ ${ok}/${selected.length} ไฟล์`, 'success');
+    selected = [];
+    fileInput.value = '';
+    document.getElementById('selected-files').innerHTML = '';
+    document.getElementById('upload-btn').disabled = true;
+    renderFileList();
+  } catch (err) {
+    showStatus('upload-status', `❌ บันทึก manifest ล้มเหลว: ${err.message}`, 'error');
+  }
+
+  btn.disabled = false;
+  setTimeout(() => { pBar.style.display = 'none'; pFil.style.width = '0%'; }, 2500);
+}
+
+// ════════════════════════════════════════
+//  Manifest helpers
+// ════════════════════════════════════════
+async function saveManifest() {
+  const json = JSON.stringify(manifest, null, 2);
+  const path = 'data/manifest.json';
+  const existing = await api.getFile(path);
+  await api.putFile(path, strToB64(json), 'Update manifest.json', existing?.sha);
+}
+
+async function refreshManifest() {
+  const raw = `https://raw.githubusercontent.com/${api.owner}/${api.repo}/${api.branch}`;
+  try {
+    const r = await fetch(`${raw}/data/manifest.json?t=${Date.now()}`);
+    manifest = r.ok ? await r.json() : { files: [] };
+  } catch { manifest = { files: [] }; }
+  renderFileList();
+}
+
+function renderFileList() {
+  const ul = document.getElementById('file-list');
+  if (!manifest.files?.length) {
+    ul.innerHTML = '<li style="color:rgba(255,255,255,.38);font-size:13px;padding:6px 0;">ยังไม่มีไฟล์</li>';
+    return;
+  }
+  ul.innerHTML = manifest.files.map((f, i) => `
+    <li class="file-item">
+      <div class="file-icon">${/\.kmz$/i.test(f.name) ? '📦' : '🗺️'}</div>
+      <div class="file-info">
+        <div class="file-name">${f.name}</div>
+        <div class="file-meta">
+          ${f.type?.toUpperCase()}
+          ${f.size ? ` · ${(f.size / 1024).toFixed(1)} KB` : ''}
+          ${f.uploadedAt ? ` · ${new Date(f.uploadedAt).toLocaleDateString('th-TH')}` : ''}
+        </div>
+      </div>
+      <button class="btn btn-danger" onclick="deleteFile(${i})">ลบ</button>
+    </li>
+  `).join('');
+}
+
+async function deleteFile(i) {
+  if (!api) return;
+  const f = manifest.files[i];
+  if (!confirm(`ต้องการลบ "${f.name}" หรือไม่?`)) return;
+
+  try {
+    const existing = await api.getFile(f.path);
+    if (existing) await api.delFile(f.path, existing.sha, `Delete ${f.name}`);
+    manifest.files.splice(i, 1);
+    await saveManifest();
+    showStatus('upload-status', `✅ ลบ ${f.name} สำเร็จ`, 'success');
+    renderFileList();
+  } catch (err) {
+    showStatus('upload-status', `❌ ลบไม่สำเร็จ: ${err.message}`, 'error');
+  }
+}
+
+// ════════════════════════════════════════
+//  Utility
+// ════════════════════════════════════════
+function showStatus(id, msg, type) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className   = `status ${type}`;
+  el.style.display = 'block';
+}
+
+/* Restore session */
+(function init() {
+  const saved = sessionStorage.getItem('gh');
+  if (saved) {
+    const { token, owner, repo, branch } = JSON.parse(saved);
+    document.getElementById('gh-token').value  = token;
+    document.getElementById('gh-owner').value  = owner;
+    document.getElementById('gh-repo').value   = repo;
+    document.getElementById('gh-branch').value = branch;
+  } else {
+    if (CONFIG.owner !== 'YOUR_GITHUB_USERNAME') document.getElementById('gh-owner').value = CONFIG.owner;
+    if (CONFIG.repo  !== 'YOUR_REPO_NAME')       document.getElementById('gh-repo').value  = CONFIG.repo;
+    document.getElementById('gh-branch').value = CONFIG.branch;
+  }
+})();
+</script>
+</body>
+</html>

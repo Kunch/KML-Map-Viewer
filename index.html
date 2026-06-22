@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KML Map Viewer</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; overflow: hidden; font-family: 'Segoe UI', Tahoma, sans-serif; }
+
+    #app { display: flex; height: 100vh; }
+
+    /* ── Sidebar ── */
+    #sidebar {
+      width: 280px;
+      min-width: 280px;
+      background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 2px 0 12px rgba(0,0,0,.4);
+      z-index: 1000;
+    }
+
+    #sidebar-header {
+      padding: 18px 16px 14px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    #sidebar-header h1 { font-size: 17px; font-weight: 700; color: #e94560; margin-bottom: 3px; }
+    #sidebar-header p  { font-size: 12px; color: rgba(255,255,255,.45); }
+
+    #locate-btn {
+      margin: 12px 14px 0;
+      padding: 9px 14px;
+      background: #e94560;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: background .2s;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    #locate-btn:hover { background: #c73652; }
+
+    #layers-section {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 0 6px;
+    }
+
+    .section-title {
+      padding: 6px 16px 4px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: rgba(255,255,255,.35);
+    }
+
+    .layer-item {
+      display: flex;
+      align-items: center;
+      padding: 9px 14px;
+      cursor: pointer;
+      transition: background .15s;
+      gap: 9px;
+    }
+    .layer-item:hover { background: rgba(255,255,255,.05); }
+
+    .layer-color {
+      width: 11px; height: 11px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .layer-name {
+      font-size: 13px;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .layer-zoom {
+      background: none;
+      border: 1px solid rgba(255,255,255,.2);
+      color: rgba(255,255,255,.55);
+      width: 22px; height: 22px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .layer-zoom:hover { background: rgba(255,255,255,.1); color: #fff; }
+
+    .layer-toggle {
+      width: 34px; height: 19px;
+      background: #3a3a5c;
+      border-radius: 10px;
+      position: relative;
+      cursor: pointer;
+      transition: background .2s;
+      flex-shrink: 0;
+    }
+    .layer-toggle.active { background: #e94560; }
+    .layer-toggle::after {
+      content: '';
+      position: absolute;
+      width: 15px; height: 15px;
+      background: #fff;
+      border-radius: 50%;
+      top: 2px; left: 2px;
+      transition: left .2s;
+    }
+    .layer-toggle.active::after { left: 17px; }
+
+    #empty-state {
+      padding: 24px 16px;
+      text-align: center;
+      color: rgba(255,255,255,.4);
+      font-size: 13px;
+      line-height: 1.8;
+    }
+    #empty-state a { color: #e94560; }
+
+    #loading-state {
+      padding: 24px 16px;
+      text-align: center;
+      color: rgba(255,255,255,.55);
+      font-size: 13px;
+    }
+
+    .spinner {
+      border: 2px solid rgba(255,255,255,.1);
+      border-top: 2px solid #e94560;
+      border-radius: 50%;
+      width: 22px; height: 22px;
+      animation: spin .8s linear infinite;
+      margin: 0 auto 10px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #location-info {
+      padding: 10px 14px;
+      border-top: 1px solid rgba(255,255,255,.07);
+      font-size: 11px;
+      color: rgba(255,255,255,.4);
+      word-break: break-all;
+    }
+
+    #sidebar-footer {
+      padding: 10px 14px;
+      border-top: 1px solid rgba(255,255,255,.07);
+    }
+    #admin-link {
+      display: block;
+      text-align: center;
+      padding: 7px;
+      color: rgba(255,255,255,.4);
+      text-decoration: none;
+      font-size: 12px;
+      border-radius: 6px;
+      transition: all .2s;
+    }
+    #admin-link:hover { background: rgba(255,255,255,.05); color: rgba(255,255,255,.8); }
+
+    /* ── Map ── */
+    #map { flex: 1; }
+
+    /* User location pulse */
+    .location-pulse {
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: #4285f4;
+      border: 3px solid #fff;
+      box-shadow: 0 0 0 rgba(66,133,244,.5);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%   { box-shadow: 0 0 0 0   rgba(66,133,244,.5); }
+      70%  { box-shadow: 0 0 0 12px rgba(66,133,244,0);  }
+      100% { box-shadow: 0 0 0 0   rgba(66,133,244,0);   }
+    }
+
+    /* Error toast */
+    #error-toast {
+      position: fixed;
+      bottom: 20px; right: 20px;
+      background: #c62828;
+      color: #fff;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      display: none;
+      z-index: 9999;
+      max-width: 300px;
+    }
+
+    @media (max-width: 600px) {
+      #sidebar { width: 220px; min-width: 220px; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ══ Sidebar ══ -->
+  <div id="sidebar">
+    <div id="sidebar-header">
+      <h1>🗺️ KML Map Viewer</h1>
+      <p>แสดงแผนที่และข้อมูล KML/KMZ</p>
+    </div>
+
+    <button id="locate-btn">📍 ตำแหน่งของฉัน</button>
+
+    <div id="layers-section">
+      <div class="section-title">ชั้นข้อมูล</div>
+
+      <div id="loading-state">
+        <div class="spinner"></div>
+        กำลังโหลดข้อมูล…
+      </div>
+
+      <div id="layer-list" style="display:none;"></div>
+
+      <div id="empty-state" style="display:none;">
+        ยังไม่มีไฟล์ KML/KMZ<br>
+        <a href="admin.html">อัพโหลดผ่านหน้า Admin →</a>
+      </div>
+    </div>
+
+    <div id="location-info">กด "ตำแหน่งของฉัน" เพื่อระบุที่อยู่</div>
+
+    <div id="sidebar-footer">
+      <a href="admin.html" id="admin-link">⚙️ Admin Panel</a>
+    </div>
+  </div>
+
+  <!-- ══ Map ══ -->
+  <div id="map"></div>
+
+</div>
+
+<div id="error-toast"></div>
+
+<!-- Libraries -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="config.js"></script>
+<script>
+// ════════════════════════════════════════
+//  Map setup
+// ════════════════════════════════════════
+const map = L.map('map', {
+  center: CONFIG.defaultCenter,
+  zoom:   CONFIG.defaultZoom
+});
+
+const baseOSM = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap contributors',
+  maxZoom: 19
+}).addTo(map);
+
+const baseSat = L.tileLayer(
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  { attribution: '© Esri', maxZoom: 19 }
+);
+
+L.control.layers({ '🗺️ OpenStreetMap': baseOSM, '🛰️ Satellite': baseSat }).addTo(map);
+
+// ════════════════════════════════════════
+//  KML / KMZ Parser
+// ════════════════════════════════════════
+
+/** KML AABBGGRR → CSS #RRGGBB */
+function kmlColor(raw) {
+  if (!raw) return null;
+  const c = raw.trim().replace('#', '');
+  if (c.length === 8) return `#${c.slice(6,8)}${c.slice(4,6)}${c.slice(2,4)}`;
+  if (c.length === 6) return `#${c}`;
+  return null;
+}
+
+function parseCoords(str) {
+  return str.trim().split(/\s+/).filter(Boolean).map(seg => {
+    const p = seg.split(',');
+    const lng = parseFloat(p[0]), lat = parseFloat(p[1]);
+    return isNaN(lat) || isNaN(lng) ? null : [lat, lng];
+  }).filter(Boolean);
+}
+
+function parseKML(kmlStr, layerColor) {
+  const doc = new DOMParser().parseFromString(kmlStr, 'text/xml');
+  if (doc.querySelector('parsererror')) throw new Error('Invalid KML');
+
+  const group = L.featureGroup();
+
+  /* ── Styles ── */
+  const styles = {};
+  doc.querySelectorAll('Style[id]').forEach(s => {
+    const id = '#' + s.getAttribute('id');
+    const lc  = kmlColor(s.querySelector('LineStyle color')?.textContent);
+    const pc  = kmlColor(s.querySelector('PolyStyle color')?.textContent);
+    styles[id] = {
+      color:       lc || pc || layerColor,
+      fillColor:   pc || lc || layerColor,
+      fillOpacity: parseFloat(s.querySelector('PolyStyle opacity')?.textContent) || 0.35,
+      weight: 2
+    };
+  });
+
+  /* StyleMap → resolve to 'normal' pair */
+  doc.querySelectorAll('StyleMap[id]').forEach(sm => {
+    const id = '#' + sm.getAttribute('id');
+    for (const pair of sm.querySelectorAll('Pair')) {
+      if (pair.querySelector('key')?.textContent === 'normal') {
+        const ref = pair.querySelector('styleUrl')?.textContent;
+        if (ref && styles[ref]) { styles[id] = styles[ref]; break; }
+      }
+    }
+  });
+
+  function getStyle(placemark) {
+    const url = placemark.querySelector('styleUrl')?.textContent?.trim();
+    return styles[url] || { color: layerColor, fillColor: layerColor, fillOpacity: 0.35, weight: 2 };
+  }
+
+  /* ── Add geometries ── */
+  function addPoint(lat, lng, popup, s) {
+    L.circleMarker([lat, lng], {
+      radius: 7, color: s.color,
+      fillColor: s.fillColor, fillOpacity: 0.85, weight: 2
+    }).bindPopup(popup).addTo(group);
+  }
+
+  function addLine(coords, popup, s) {
+    if (coords.length > 1)
+      L.polyline(coords, { color: s.color, weight: s.weight }).bindPopup(popup).addTo(group);
+  }
+
+  function addPoly(coords, popup, s) {
+    if (coords.length > 2)
+      L.polygon(coords, {
+        color: s.color, fillColor: s.fillColor,
+        fillOpacity: s.fillOpacity, weight: s.weight
+      }).bindPopup(popup).addTo(group);
+  }
+
+  doc.querySelectorAll('Placemark').forEach(pm => {
+    const name = pm.querySelector(':scope > name')?.textContent?.trim() || '';
+    const desc = pm.querySelector(':scope > description')?.textContent?.trim() || '';
+    const s    = getStyle(pm);
+    const pop  = `<div style="max-width:220px"><b>${name}</b>${desc ? `<br><div style="margin-top:4px;font-size:12px;">${desc}</div>` : ''}</div>`;
+
+    /* Point */
+    const ptEl = pm.querySelector('Point coordinates');
+    if (ptEl) {
+      const p = ptEl.textContent.trim().split(',');
+      const lng = parseFloat(p[0]), lat = parseFloat(p[1]);
+      if (!isNaN(lat) && !isNaN(lng)) addPoint(lat, lng, pop, s);
+    }
+
+    /* LineString */
+    pm.querySelectorAll('LineString coordinates').forEach(el => addLine(parseCoords(el.textContent), pop, s));
+
+    /* Polygon (outer ring only) */
+    pm.querySelectorAll('Polygon').forEach(pg => {
+      const outer = pg.querySelector('outerBoundaryIs LinearRing coordinates');
+      if (outer) addPoly(parseCoords(outer.textContent), pop, s);
+    });
+
+    /* MultiGeometry — handled via nested selectors above already */
+  });
+
+  return group;
+}
+
+async function loadKMZ(buf, color) {
+  const zip = await JSZip.loadAsync(buf);
+  let entry = zip.file('doc.kml');
+  if (!entry) {
+    const kmlNames = Object.keys(zip.files).filter(n => n.toLowerCase().endsWith('.kml'));
+    if (!kmlNames.length) throw new Error('No KML inside KMZ');
+    entry = zip.file(kmlNames[0]);
+  }
+  return parseKML(await entry.async('string'), color);
+}
+
+// ════════════════════════════════════════
+//  Layer colours (cycling)
+// ════════════════════════════════════════
+const COLORS = ['#e94560','#2196f3','#4caf50','#ff9800','#9c27b0','#00bcd4','#ff5722','#8bc34a','#f44336','#3f51b5'];
+let colorIdx = 0;
+const nextColor = () => COLORS[colorIdx++ % COLORS.length];
+
+// ════════════════════════════════════════
+//  Sidebar layer row
+// ════════════════════════════════════════
+function addSidebarRow(label, featureGroup, color) {
+  document.getElementById('layer-list').style.display = 'block';
+  document.getElementById('empty-state').style.display = 'none';
+
+  const item    = document.createElement('div');
+  item.className = 'layer-item';
+
+  const dot = document.createElement('div');
+  dot.className = 'layer-color';
+  dot.style.background = color;
+
+  const nameEl = document.createElement('div');
+  nameEl.className = 'layer-name';
+  nameEl.title = label;
+  nameEl.textContent = label;
+
+  const zoomBtn = document.createElement('button');
+  zoomBtn.className = 'layer-zoom';
+  zoomBtn.title = 'ซูมไปยังชั้นข้อมูล';
+  zoomBtn.innerHTML = '⊕';
+  zoomBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    try { map.fitBounds(featureGroup.getBounds(), { padding: [24, 24] }); } catch {}
+  });
+
+  const toggle = document.createElement('div');
+  toggle.className = 'layer-toggle active';
+  toggle.addEventListener('click', e => {
+    e.stopPropagation();
+    if (map.hasLayer(featureGroup)) {
+      map.removeLayer(featureGroup);
+      toggle.classList.remove('active');
+    } else {
+      map.addLayer(featureGroup);
+      toggle.classList.add('active');
+    }
+  });
+
+  item.addEventListener('click', () => {
+    try { map.fitBounds(featureGroup.getBounds(), { padding: [24, 24] }); } catch {}
+  });
+
+  item.append(dot, nameEl, zoomBtn, toggle);
+  document.getElementById('layer-list').appendChild(item);
+}
+
+// ════════════════════════════════════════
+//  Load all files from manifest
+// ════════════════════════════════════════
+async function loadAll() {
+  const rawBase = `https://raw.githubusercontent.com/${CONFIG.owner}/${CONFIG.repo}/${CONFIG.branch}`;
+  let manifest = { files: [] };
+
+  try {
+    const r = await fetch(`${rawBase}/data/manifest.json?t=${Date.now()}`);
+    if (r.ok) manifest = await r.json();
+  } catch {}
+
+  document.getElementById('loading-state').style.display = 'none';
+
+  if (!manifest.files?.length) {
+    document.getElementById('empty-state').style.display = 'block';
+    return;
+  }
+
+  const allGroups = [];
+
+  for (const file of manifest.files) {
+    try {
+      const color = nextColor();
+      const res   = await fetch(`${rawBase}/${file.path}?t=${Date.now()}`);
+      if (!res.ok) continue;
+
+      let fg;
+      if (file.name.toLowerCase().endsWith('.kmz')) {
+        fg = await loadKMZ(await res.arrayBuffer(), color);
+      } else {
+        fg = parseKML(await res.text(), color);
+      }
+
+      fg.addTo(map);
+      allGroups.push(fg);
+      const label = file.name.replace(/\.(kml|kmz)$/i, '');
+      addSidebarRow(label, fg, color);
+    } catch (err) {
+      console.warn(`Cannot load ${file.name}:`, err);
+    }
+  }
+
+  /* Fit map to all loaded layers */
+  if (allGroups.length) {
+    try {
+      const combined = L.featureGroup(allGroups);
+      map.fitBounds(combined.getBounds(), { padding: [30, 30] });
+    } catch {}
+  }
+}
+
+// ════════════════════════════════════════
+//  Geolocation
+// ════════════════════════════════════════
+let locMarker  = null;
+let locCircle  = null;
+let watchId    = null;
+
+function onPosition(pos) {
+  const { latitude: lat, longitude: lng, accuracy } = pos.coords;
+
+  const icon = L.divIcon({
+    className: '',
+    html: '<div class="location-pulse"></div>',
+    iconSize: [18, 18],
+    iconAnchor: [9, 9]
+  });
+
+  if (locMarker) {
+    locMarker.setLatLng([lat, lng]);
+    locCircle.setLatLng([lat, lng]).setRadius(accuracy);
+  } else {
+    locMarker = L.marker([lat, lng], { icon })
+      .bindPopup('📍 ตำแหน่งของคุณ')
+      .addTo(map);
+    locCircle = L.circle([lat, lng], {
+      radius: accuracy, color: '#4285f4',
+      fillColor: '#4285f4', fillOpacity: 0.08, weight: 1
+    }).addTo(map);
+  }
+
+  document.getElementById('location-info').textContent =
+    `📍 ${lat.toFixed(5)}, ${lng.toFixed(5)}  (±${Math.round(accuracy)} m)`;
+}
+
+document.getElementById('locate-btn').addEventListener('click', () => {
+  if (!navigator.geolocation) {
+    alert('เบราว์เซอร์ของคุณไม่รองรับ Geolocation'); return;
+  }
+  if (watchId !== null) {
+    if (locMarker) map.panTo(locMarker.getLatLng());
+    return;
+  }
+
+  document.getElementById('location-info').textContent = 'กำลังระบุตำแหน่ง…';
+
+  watchId = navigator.geolocation.watchPosition(
+    pos => {
+      onPosition(pos);
+      if (!locMarker) map.panTo([pos.coords.latitude, pos.coords.longitude]);
+    },
+    err => {
+      const msgs = ['', 'กรุณาอนุญาตการเข้าถึงตำแหน่ง', 'ไม่สามารถระบุตำแหน่งได้', 'หมดเวลา'];
+      document.getElementById('location-info').textContent = msgs[err.code] || 'เกิดข้อผิดพลาด';
+      watchId = null;
+    },
+    { enableHighAccuracy: true, timeout: 15000 }
+  );
+});
+
+// ════════════════════════════════════════
+//  Start
+// ════════════════════════════════════════
+loadAll().catch(err => {
+  document.getElementById('loading-state').style.display = 'none';
+  document.getElementById('empty-state').style.display = 'block';
+  console.error(err);
+});
+</script>
+</body>
+</html>
