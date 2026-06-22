@@ -5,10 +5,10 @@
 
 const CONFIG = {
   // ชื่อ GitHub Account ของคุณ เช่น 'johnsmith'
-  owner: 'YOUR_GITHUB_USERNAME',
+  owner: 'Kunch',
 
   // ชื่อ Repository เช่น 'my-map-site'
-  repo: 'YOUR_REPO_NAME',
+  repo: 'KML-Map-Viewer',
 
   // Branch หลัก (ปกติคือ main หรือ master)
   branch: 'main',
