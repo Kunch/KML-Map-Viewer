@@ -6,204 +6,241 @@
   <title>KML Map Viewer</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; overflow: hidden; font-family: 'Segoe UI', Tahoma, sans-serif; }
-
     #app { display: flex; height: 100vh; }
 
-    /* ── Sidebar ── */
+    /* ══════════════ Sidebar ══════════════ */
     #sidebar {
-      width: 280px;
-      min-width: 280px;
+      width: 290px; min-width: 290px;
       background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
-      color: #fff;
-      display: flex;
-      flex-direction: column;
-      box-shadow: 2px 0 12px rgba(0,0,0,.4);
+      color: #dde;
+      display: flex; flex-direction: column;
+      box-shadow: 2px 0 12px rgba(0,0,0,.45);
       z-index: 1000;
     }
 
     #sidebar-header {
-      padding: 18px 16px 14px;
+      padding: 16px 16px 12px;
       border-bottom: 1px solid rgba(255,255,255,.08);
     }
-    #sidebar-header h1 { font-size: 17px; font-weight: 700; color: #e94560; margin-bottom: 3px; }
-    #sidebar-header p  { font-size: 12px; color: rgba(255,255,255,.45); }
+    #sidebar-header h1 { font-size: 16px; font-weight: 700; color: #e94560; margin-bottom: 2px; }
+    #sidebar-header p  { font-size: 11px; color: rgba(255,255,255,.4); }
 
+    /* ── Locate button ── */
     #locate-btn {
-      margin: 12px 14px 0;
-      padding: 9px 14px;
-      background: #e94560;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: 600;
+      margin: 10px 14px 0;
+      padding: 8px 14px;
+      background: #e94560; color: #fff;
+      border: none; border-radius: 7px;
+      cursor: pointer; font-size: 13px; font-weight: 600;
       transition: background .2s;
-      display: flex;
-      align-items: center;
-      gap: 7px;
+      display: flex; align-items: center; gap: 6px;
     }
     #locate-btn:hover { background: #c73652; }
 
+    /* ── Tool buttons ── */
+    #tools-section {
+      padding: 10px 14px 0;
+      display: flex; gap: 8px; flex-wrap: wrap;
+    }
+
+    .tool-btn {
+      flex: 1; min-width: 70px;
+      padding: 7px 6px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.1);
+      color: #ccd; border-radius: 7px;
+      cursor: pointer; font-size: 11px; font-weight: 600;
+      transition: all .2s;
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .tool-btn .icon { font-size: 18px; }
+    .tool-btn:hover { background: rgba(255,255,255,.12); color: #fff; }
+    .tool-btn.active { background: #e94560; color: #fff; border-color: #e94560; }
+
+    #clear-measure-btn {
+      width: 100%; margin: 6px 0 0;
+      padding: 6px; border-radius: 7px;
+      background: rgba(255,152,0,.12);
+      border: 1px solid rgba(255,152,0,.3);
+      color: #ffb74d; cursor: pointer;
+      font-size: 11px; font-weight: 600;
+      transition: all .2s; display: none;
+    }
+    #clear-measure-btn:hover { background: rgba(255,152,0,.22); }
+
+    /* divider */
+    .divider {
+      height: 1px;
+      background: rgba(255,255,255,.07);
+      margin: 10px 14px;
+    }
+
+    /* ── Layers ── */
     #layers-section {
-      flex: 1;
-      overflow-y: auto;
-      padding: 10px 0 6px;
+      flex: 1; overflow-y: auto;
+      padding: 0 0 6px;
     }
-
     .section-title {
-      padding: 6px 16px 4px;
-      font-size: 10px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1.2px;
-      color: rgba(255,255,255,.35);
+      padding: 4px 16px;
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1.2px;
+      color: rgba(255,255,255,.32);
     }
 
-    .layer-item {
-      display: flex;
-      align-items: center;
-      padding: 9px 14px;
+    .layer-block { padding: 0 12px 2px; }
+
+    .layer-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 4px 3px;
       cursor: pointer;
+      border-radius: 6px;
       transition: background .15s;
-      gap: 9px;
     }
-    .layer-item:hover { background: rgba(255,255,255,.05); }
+    .layer-row:hover { background: rgba(255,255,255,.04); }
 
-    .layer-color {
-      width: 11px; height: 11px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    .layer-name {
-      font-size: 13px;
-      flex: 1;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
+    .layer-color { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .layer-name { font-size: 13px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     .layer-zoom {
       background: none;
-      border: 1px solid rgba(255,255,255,.2);
-      color: rgba(255,255,255,.55);
-      width: 22px; height: 22px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 13px;
+      border: 1px solid rgba(255,255,255,.18);
+      color: rgba(255,255,255,.5);
+      width: 21px; height: 21px; border-radius: 4px;
+      cursor: pointer; font-size: 12px;
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0;
     }
     .layer-zoom:hover { background: rgba(255,255,255,.1); color: #fff; }
 
     .layer-toggle {
-      width: 34px; height: 19px;
-      background: #3a3a5c;
-      border-radius: 10px;
-      position: relative;
-      cursor: pointer;
-      transition: background .2s;
-      flex-shrink: 0;
+      width: 32px; height: 18px;
+      background: #3a3a5c; border-radius: 9px;
+      position: relative; cursor: pointer;
+      transition: background .2s; flex-shrink: 0;
     }
     .layer-toggle.active { background: #e94560; }
     .layer-toggle::after {
-      content: '';
-      position: absolute;
-      width: 15px; height: 15px;
-      background: #fff;
-      border-radius: 50%;
-      top: 2px; left: 2px;
-      transition: left .2s;
+      content: ''; position: absolute;
+      width: 14px; height: 14px;
+      background: #fff; border-radius: 50%;
+      top: 2px; left: 2px; transition: left .2s;
     }
-    .layer-toggle.active::after { left: 17px; }
+    .layer-toggle.active::after { left: 16px; }
 
-    #empty-state {
-      padding: 24px 16px;
-      text-align: center;
-      color: rgba(255,255,255,.4);
-      font-size: 13px;
-      line-height: 1.8;
+    /* Opacity slider row */
+    .opacity-row {
+      display: flex; align-items: center; gap: 7px;
+      padding: 0 4px 6px;
     }
-    #empty-state a { color: #e94560; }
+    .opacity-row label { font-size: 10px; color: rgba(255,255,255,.35); white-space: nowrap; }
+    .opacity-slider {
+      flex: 1; -webkit-appearance: none; appearance: none;
+      height: 3px; border-radius: 2px;
+      background: rgba(255,255,255,.15); outline: none; cursor: pointer;
+    }
+    .opacity-slider::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 12px; height: 12px;
+      border-radius: 50%; background: #e94560; cursor: pointer;
+    }
+    .opacity-slider::-moz-range-thumb {
+      width: 12px; height: 12px;
+      border-radius: 50%; background: #e94560; cursor: pointer; border: none;
+    }
+    .opacity-val { font-size: 10px; color: rgba(255,255,255,.4); min-width: 28px; text-align: right; }
 
     #loading-state {
-      padding: 24px 16px;
-      text-align: center;
-      color: rgba(255,255,255,.55);
-      font-size: 13px;
+      padding: 20px 16px; text-align: center;
+      color: rgba(255,255,255,.5); font-size: 13px;
     }
-
     .spinner {
       border: 2px solid rgba(255,255,255,.1);
       border-top: 2px solid #e94560;
-      border-radius: 50%;
-      width: 22px; height: 22px;
-      animation: spin .8s linear infinite;
-      margin: 0 auto 10px;
+      border-radius: 50%; width: 20px; height: 20px;
+      animation: spin .8s linear infinite; margin: 0 auto 8px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    #location-info {
-      padding: 10px 14px;
-      border-top: 1px solid rgba(255,255,255,.07);
-      font-size: 11px;
-      color: rgba(255,255,255,.4);
-      word-break: break-all;
+    #empty-state {
+      padding: 20px 16px; text-align: center;
+      color: rgba(255,255,255,.38); font-size: 13px; line-height: 1.8;
     }
+    #empty-state a { color: #e94560; }
 
+    /* ── Bottom ── */
+    #location-info {
+      padding: 8px 14px; border-top: 1px solid rgba(255,255,255,.07);
+      font-size: 11px; color: rgba(255,255,255,.38); word-break: break-all;
+    }
     #sidebar-footer {
-      padding: 10px 14px;
-      border-top: 1px solid rgba(255,255,255,.07);
+      padding: 8px 14px; border-top: 1px solid rgba(255,255,255,.07);
     }
     #admin-link {
-      display: block;
-      text-align: center;
-      padding: 7px;
-      color: rgba(255,255,255,.4);
-      text-decoration: none;
-      font-size: 12px;
-      border-radius: 6px;
-      transition: all .2s;
+      display: block; text-align: center; padding: 7px;
+      color: rgba(255,255,255,.38); text-decoration: none;
+      font-size: 12px; border-radius: 6px; transition: all .2s;
     }
     #admin-link:hover { background: rgba(255,255,255,.05); color: rgba(255,255,255,.8); }
 
-    /* ── Map ── */
-    #map { flex: 1; }
+    /* ══════════════ Map ══════════════ */
+    #map { flex: 1; position: relative; }
+
+    /* Coordinates bar */
+    #coords-bar {
+      position: absolute;
+      bottom: 28px; left: 50%; transform: translateX(-50%);
+      background: rgba(10,10,25,.75);
+      backdrop-filter: blur(6px);
+      color: #e0e8ff;
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-size: 12px; font-family: 'Courier New', monospace;
+      z-index: 1000; pointer-events: none;
+      border: 1px solid rgba(255,255,255,.1);
+      white-space: nowrap;
+    }
+    #coords-bar .label { color: rgba(255,255,255,.45); margin-right: 4px; }
+
+    /* Measure tooltip */
+    .measure-tip {
+      background: rgba(255,102,0,.9) !important;
+      color: #fff !important; border: none !important;
+      border-radius: 4px !important; font-size: 11px !important;
+      font-weight: 700 !important; padding: 2px 7px !important;
+      white-space: nowrap !important;
+    }
+    .measure-tip::before { border-top-color: rgba(255,102,0,.9) !important; }
 
     /* User location pulse */
     .location-pulse {
-      width: 18px; height: 18px;
-      border-radius: 50%;
-      background: #4285f4;
-      border: 3px solid #fff;
-      box-shadow: 0 0 0 rgba(66,133,244,.5);
+      width: 16px; height: 16px; border-radius: 50%;
+      background: #4285f4; border: 3px solid #fff;
       animation: pulse 2s infinite;
     }
     @keyframes pulse {
       0%   { box-shadow: 0 0 0 0   rgba(66,133,244,.5); }
-      70%  { box-shadow: 0 0 0 12px rgba(66,133,244,0);  }
-      100% { box-shadow: 0 0 0 0   rgba(66,133,244,0);   }
+      70%  { box-shadow: 0 0 0 10px rgba(66,133,244,0); }
+      100% { box-shadow: 0 0 0 0   rgba(66,133,244,0); }
     }
 
-    /* Error toast */
-    #error-toast {
-      position: fixed;
-      bottom: 20px; right: 20px;
-      background: #c62828;
-      color: #fff;
-      padding: 10px 16px;
-      border-radius: 8px;
-      font-size: 13px;
-      display: none;
-      z-index: 9999;
-      max-width: 300px;
+    /* Pin form popup */
+    .pin-form input, .pin-form textarea {
+      width: 100%; padding: 5px 8px; margin-bottom: 6px;
+      border: 1px solid #ccc; border-radius: 5px;
+      font-size: 13px; outline: none; font-family: inherit;
     }
+    .pin-form textarea { resize: vertical; height: 54px; }
+    .pin-form .btn-row { display: flex; gap: 6px; }
+    .pin-form button {
+      flex: 1; padding: 5px; border: none; border-radius: 5px;
+      cursor: pointer; font-size: 12px; font-weight: 700;
+    }
+    .pin-confirm { background: #e94560; color: #fff; }
+    .pin-cancel  { background: #e0e0e0; color: #333; }
 
     @media (max-width: 600px) {
-      #sidebar { width: 220px; min-width: 220px; }
+      #sidebar { width: 230px; min-width: 230px; }
     }
   </style>
 </head>
@@ -217,18 +254,29 @@
       <p>แสดงแผนที่และข้อมูล KML/KMZ</p>
     </div>
 
+    <!-- locate -->
     <button id="locate-btn">📍 ตำแหน่งของฉัน</button>
 
+    <!-- tools -->
+    <div id="tools-section">
+      <button class="tool-btn" id="btn-pin" onclick="toggleTool('pin')">
+        <span class="icon">📌</span>ปักหมุด
+      </button>
+      <button class="tool-btn" id="btn-measure" onclick="toggleTool('measure')">
+        <span class="icon">📏</span>วัดระยะ
+      </button>
+      <button id="clear-measure-btn" onclick="clearMeasure()">🗑️ ล้างการวัด</button>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- layers -->
     <div id="layers-section">
       <div class="section-title">ชั้นข้อมูล</div>
-
       <div id="loading-state">
-        <div class="spinner"></div>
-        กำลังโหลดข้อมูล…
+        <div class="spinner"></div>กำลังโหลดข้อมูล…
       </div>
-
-      <div id="layer-list" style="display:none;"></div>
-
+      <div id="layer-list"></div>
       <div id="empty-state" style="display:none;">
         ยังไม่มีไฟล์ KML/KMZ<br>
         <a href="admin.html">อัพโหลดผ่านหน้า Admin →</a>
@@ -243,28 +291,31 @@
   </div>
 
   <!-- ══ Map ══ -->
-  <div id="map"></div>
+  <div id="map">
+    <div id="coords-bar">
+      <span class="label">Lat/Lng</span>
+      <span id="coords-text">เลื่อนเมาส์บนแผนที่</span>
+    </div>
+  </div>
 
 </div>
-
-<div id="error-toast"></div>
 
 <!-- Libraries -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="config.js"></script>
 <script>
-// ════════════════════════════════════════
-//  Map setup
-// ════════════════════════════════════════
+// ══════════════════════════════════════════════
+//  1. Map setup
+// ══════════════════════════════════════════════
 const map = L.map('map', {
   center: CONFIG.defaultCenter,
-  zoom:   CONFIG.defaultZoom
+  zoom:   CONFIG.defaultZoom,
+  doubleClickZoom: true
 });
 
 const baseOSM = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '© OpenStreetMap contributors',
-  maxZoom: 19
+  attribution: '© OpenStreetMap contributors', maxZoom: 19
 }).addTo(map);
 
 const baseSat = L.tileLayer(
@@ -274,11 +325,18 @@ const baseSat = L.tileLayer(
 
 L.control.layers({ '🗺️ OpenStreetMap': baseOSM, '🛰️ Satellite': baseSat }).addTo(map);
 
-// ════════════════════════════════════════
-//  KML / KMZ Parser
-// ════════════════════════════════════════
+// ══════════════════════════════════════════════
+//  2. Coordinate display on mouse move
+// ══════════════════════════════════════════════
+map.on('mousemove', e => {
+  const { lat, lng } = e.latlng;
+  document.getElementById('coords-text').textContent =
+    `${lat.toFixed(6)},  ${lng.toFixed(6)}`;
+});
 
-/** KML AABBGGRR → CSS #RRGGBB */
+// ══════════════════════════════════════════════
+//  3. KML / KMZ Parser
+// ══════════════════════════════════════════════
 function kmlColor(raw) {
   if (!raw) return null;
   const c = raw.trim().replace('#', '');
@@ -298,15 +356,13 @@ function parseCoords(str) {
 function parseKML(kmlStr, layerColor) {
   const doc = new DOMParser().parseFromString(kmlStr, 'text/xml');
   if (doc.querySelector('parsererror')) throw new Error('Invalid KML');
-
   const group = L.featureGroup();
 
-  /* ── Styles ── */
   const styles = {};
   doc.querySelectorAll('Style[id]').forEach(s => {
     const id = '#' + s.getAttribute('id');
-    const lc  = kmlColor(s.querySelector('LineStyle color')?.textContent);
-    const pc  = kmlColor(s.querySelector('PolyStyle color')?.textContent);
+    const lc = kmlColor(s.querySelector('LineStyle color')?.textContent);
+    const pc = kmlColor(s.querySelector('PolyStyle color')?.textContent);
     styles[id] = {
       color:       lc || pc || layerColor,
       fillColor:   pc || lc || layerColor,
@@ -315,7 +371,6 @@ function parseKML(kmlStr, layerColor) {
     };
   });
 
-  /* StyleMap → resolve to 'normal' pair */
   doc.querySelectorAll('StyleMap[id]').forEach(sm => {
     const id = '#' + sm.getAttribute('id');
     for (const pair of sm.querySelectorAll('Pair')) {
@@ -326,56 +381,54 @@ function parseKML(kmlStr, layerColor) {
     }
   });
 
-  function getStyle(placemark) {
-    const url = placemark.querySelector('styleUrl')?.textContent?.trim();
+  function getStyle(pm) {
+    const url = pm.querySelector('styleUrl')?.textContent?.trim();
     return styles[url] || { color: layerColor, fillColor: layerColor, fillOpacity: 0.35, weight: 2 };
   }
 
-  /* ── Add geometries ── */
-  function addPoint(lat, lng, popup, s) {
-    L.circleMarker([lat, lng], {
-      radius: 7, color: s.color,
-      fillColor: s.fillColor, fillOpacity: 0.85, weight: 2
-    }).bindPopup(popup).addTo(group);
-  }
-
-  function addLine(coords, popup, s) {
-    if (coords.length > 1)
-      L.polyline(coords, { color: s.color, weight: s.weight }).bindPopup(popup).addTo(group);
-  }
-
-  function addPoly(coords, popup, s) {
-    if (coords.length > 2)
-      L.polygon(coords, {
-        color: s.color, fillColor: s.fillColor,
-        fillOpacity: s.fillOpacity, weight: s.weight
-      }).bindPopup(popup).addTo(group);
+  function addLayer(layer, origFillOpacity) {
+    layer._origFillOpacity = origFillOpacity ?? (layer.options.fillOpacity ?? 0);
+    layer._origOpacity     = layer.options.opacity ?? 1;
+    layer.addTo(group);
   }
 
   doc.querySelectorAll('Placemark').forEach(pm => {
     const name = pm.querySelector(':scope > name')?.textContent?.trim() || '';
     const desc = pm.querySelector(':scope > description')?.textContent?.trim() || '';
     const s    = getStyle(pm);
-    const pop  = `<div style="max-width:220px"><b>${name}</b>${desc ? `<br><div style="margin-top:4px;font-size:12px;">${desc}</div>` : ''}</div>`;
+    const pop  = `<div style="max-width:220px"><b>${name}</b>${desc ? `<br><div style="font-size:12px;margin-top:3px;">${desc}</div>` : ''}</div>`;
 
-    /* Point */
+    // Point
     const ptEl = pm.querySelector('Point coordinates');
     if (ptEl) {
       const p = ptEl.textContent.trim().split(',');
       const lng = parseFloat(p[0]), lat = parseFloat(p[1]);
-      if (!isNaN(lat) && !isNaN(lng)) addPoint(lat, lng, pop, s);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        addLayer(L.circleMarker([lat, lng], {
+          radius: 7, color: s.color, fillColor: s.fillColor, fillOpacity: 0.85, weight: 2
+        }).bindPopup(pop), 0.85);
+      }
     }
 
-    /* LineString */
-    pm.querySelectorAll('LineString coordinates').forEach(el => addLine(parseCoords(el.textContent), pop, s));
-
-    /* Polygon (outer ring only) */
-    pm.querySelectorAll('Polygon').forEach(pg => {
-      const outer = pg.querySelector('outerBoundaryIs LinearRing coordinates');
-      if (outer) addPoly(parseCoords(outer.textContent), pop, s);
+    // LineStrings
+    pm.querySelectorAll('LineString coordinates').forEach(el => {
+      const coords = parseCoords(el.textContent);
+      if (coords.length > 1)
+        addLayer(L.polyline(coords, { color: s.color, weight: s.weight, opacity: 1 }).bindPopup(pop), 0);
     });
 
-    /* MultiGeometry — handled via nested selectors above already */
+    // Polygons
+    pm.querySelectorAll('Polygon').forEach(pg => {
+      const outer = pg.querySelector('outerBoundaryIs LinearRing coordinates');
+      if (outer) {
+        const coords = parseCoords(outer.textContent);
+        if (coords.length > 2)
+          addLayer(L.polygon(coords, {
+            color: s.color, fillColor: s.fillColor,
+            fillOpacity: s.fillOpacity, weight: s.weight, opacity: 1
+          }).bindPopup(pop), s.fillOpacity);
+      }
+    });
   });
 
   return group;
@@ -385,29 +438,45 @@ async function loadKMZ(buf, color) {
   const zip = await JSZip.loadAsync(buf);
   let entry = zip.file('doc.kml');
   if (!entry) {
-    const kmlNames = Object.keys(zip.files).filter(n => n.toLowerCase().endsWith('.kml'));
-    if (!kmlNames.length) throw new Error('No KML inside KMZ');
-    entry = zip.file(kmlNames[0]);
+    const names = Object.keys(zip.files).filter(n => n.toLowerCase().endsWith('.kml'));
+    if (!names.length) throw new Error('No KML inside KMZ');
+    entry = zip.file(names[0]);
   }
   return parseKML(await entry.async('string'), color);
 }
 
-// ════════════════════════════════════════
-//  Layer colours (cycling)
-// ════════════════════════════════════════
+// ══════════════════════════════════════════════
+//  4. Opacity helper
+// ══════════════════════════════════════════════
+function setGroupOpacity(group, opacity) {
+  group.eachLayer(layer => {
+    if (layer instanceof L.Marker) {
+      layer.setOpacity(opacity);
+    } else if (layer.setStyle) {
+      const fo = (layer._origFillOpacity ?? 0.35) * opacity;
+      const o  = (layer._origOpacity     ?? 1)    * opacity;
+      layer.setStyle({ opacity: o, fillOpacity: fo });
+    }
+  });
+}
+
+// ══════════════════════════════════════════════
+//  5. Layer colours & sidebar
+// ══════════════════════════════════════════════
 const COLORS = ['#e94560','#2196f3','#4caf50','#ff9800','#9c27b0','#00bcd4','#ff5722','#8bc34a','#f44336','#3f51b5'];
 let colorIdx = 0;
 const nextColor = () => COLORS[colorIdx++ % COLORS.length];
 
-// ════════════════════════════════════════
-//  Sidebar layer row
-// ════════════════════════════════════════
 function addSidebarRow(label, featureGroup, color) {
-  document.getElementById('layer-list').style.display = 'block';
-  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('loading-state').style.display = 'none';
+  document.getElementById('empty-state').style.display   = 'none';
 
-  const item    = document.createElement('div');
-  item.className = 'layer-item';
+  const block = document.createElement('div');
+  block.className = 'layer-block';
+
+  /* top row */
+  const row = document.createElement('div');
+  row.className = 'layer-row';
 
   const dot = document.createElement('div');
   dot.className = 'layer-color';
@@ -415,13 +484,10 @@ function addSidebarRow(label, featureGroup, color) {
 
   const nameEl = document.createElement('div');
   nameEl.className = 'layer-name';
-  nameEl.title = label;
-  nameEl.textContent = label;
+  nameEl.title = label; nameEl.textContent = label;
 
   const zoomBtn = document.createElement('button');
-  zoomBtn.className = 'layer-zoom';
-  zoomBtn.title = 'ซูมไปยังชั้นข้อมูล';
-  zoomBtn.innerHTML = '⊕';
+  zoomBtn.className = 'layer-zoom'; zoomBtn.innerHTML = '⊕'; zoomBtn.title = 'ซูมไปยังชั้นข้อมูล';
   zoomBtn.addEventListener('click', e => {
     e.stopPropagation();
     try { map.fitBounds(featureGroup.getBounds(), { padding: [24, 24] }); } catch {}
@@ -432,139 +498,311 @@ function addSidebarRow(label, featureGroup, color) {
   toggle.addEventListener('click', e => {
     e.stopPropagation();
     if (map.hasLayer(featureGroup)) {
-      map.removeLayer(featureGroup);
-      toggle.classList.remove('active');
+      map.removeLayer(featureGroup); toggle.classList.remove('active');
     } else {
-      map.addLayer(featureGroup);
-      toggle.classList.add('active');
+      map.addLayer(featureGroup); toggle.classList.add('active');
     }
   });
 
-  item.addEventListener('click', () => {
+  row.addEventListener('click', () => {
     try { map.fitBounds(featureGroup.getBounds(), { padding: [24, 24] }); } catch {}
   });
+  row.append(dot, nameEl, zoomBtn, toggle);
 
-  item.append(dot, nameEl, zoomBtn, toggle);
-  document.getElementById('layer-list').appendChild(item);
+  /* opacity row */
+  const opRow = document.createElement('div');
+  opRow.className = 'opacity-row';
+
+  const opLabel = document.createElement('label');
+  opLabel.textContent = 'opacity';
+
+  const slider = document.createElement('input');
+  slider.type = 'range'; slider.min = 0; slider.max = 1;
+  slider.step = 0.05; slider.value = 1;
+  slider.className = 'opacity-slider';
+
+  const valEl = document.createElement('span');
+  valEl.className = 'opacity-val'; valEl.textContent = '100%';
+
+  slider.addEventListener('input', () => {
+    const v = parseFloat(slider.value);
+    valEl.textContent = Math.round(v * 100) + '%';
+    setGroupOpacity(featureGroup, v);
+  });
+
+  opRow.append(opLabel, slider, valEl);
+  block.append(row, opRow);
+  document.getElementById('layer-list').appendChild(block);
 }
 
-// ════════════════════════════════════════
-//  Load all files from manifest
-// ════════════════════════════════════════
+// ══════════════════════════════════════════════
+//  6. Load all from manifest
+// ══════════════════════════════════════════════
 async function loadAll() {
   const rawBase = `https://raw.githubusercontent.com/${CONFIG.owner}/${CONFIG.repo}/${CONFIG.branch}`;
   let manifest = { files: [] };
-
   try {
     const r = await fetch(`${rawBase}/data/manifest.json?t=${Date.now()}`);
     if (r.ok) manifest = await r.json();
   } catch {}
 
   document.getElementById('loading-state').style.display = 'none';
-
   if (!manifest.files?.length) {
-    document.getElementById('empty-state').style.display = 'block';
-    return;
+    document.getElementById('empty-state').style.display = 'block'; return;
   }
 
   const allGroups = [];
-
   for (const file of manifest.files) {
     try {
       const color = nextColor();
       const res   = await fetch(`${rawBase}/${file.path}?t=${Date.now()}`);
       if (!res.ok) continue;
-
-      let fg;
-      if (file.name.toLowerCase().endsWith('.kmz')) {
-        fg = await loadKMZ(await res.arrayBuffer(), color);
-      } else {
-        fg = parseKML(await res.text(), color);
-      }
-
+      const fg = file.name.toLowerCase().endsWith('.kmz')
+        ? await loadKMZ(await res.arrayBuffer(), color)
+        : parseKML(await res.text(), color);
       fg.addTo(map);
       allGroups.push(fg);
-      const label = file.name.replace(/\.(kml|kmz)$/i, '');
-      addSidebarRow(label, fg, color);
-    } catch (err) {
-      console.warn(`Cannot load ${file.name}:`, err);
-    }
+      addSidebarRow(file.name.replace(/\.(kml|kmz)$/i, ''), fg, color);
+    } catch (err) { console.warn(`Cannot load ${file.name}:`, err); }
   }
 
-  /* Fit map to all loaded layers */
   if (allGroups.length) {
     try {
-      const combined = L.featureGroup(allGroups);
-      map.fitBounds(combined.getBounds(), { padding: [30, 30] });
+      map.fitBounds(L.featureGroup(allGroups).getBounds(), { padding: [30, 30] });
     } catch {}
   }
 }
 
-// ════════════════════════════════════════
-//  Geolocation
-// ════════════════════════════════════════
-let locMarker  = null;
-let locCircle  = null;
-let watchId    = null;
+// ══════════════════════════════════════════════
+//  7. Geolocation
+// ══════════════════════════════════════════════
+let locMarker = null, locCircle = null, watchId = null;
 
 function onPosition(pos) {
   const { latitude: lat, longitude: lng, accuracy } = pos.coords;
-
   const icon = L.divIcon({
-    className: '',
-    html: '<div class="location-pulse"></div>',
-    iconSize: [18, 18],
-    iconAnchor: [9, 9]
+    className: '', html: '<div class="location-pulse"></div>',
+    iconSize: [16,16], iconAnchor: [8,8]
   });
-
   if (locMarker) {
     locMarker.setLatLng([lat, lng]);
     locCircle.setLatLng([lat, lng]).setRadius(accuracy);
   } else {
     locMarker = L.marker([lat, lng], { icon })
-      .bindPopup('📍 ตำแหน่งของคุณ')
-      .addTo(map);
+      .bindPopup('📍 ตำแหน่งของคุณ').addTo(map);
     locCircle = L.circle([lat, lng], {
       radius: accuracy, color: '#4285f4',
       fillColor: '#4285f4', fillOpacity: 0.08, weight: 1
     }).addTo(map);
   }
-
   document.getElementById('location-info').textContent =
     `📍 ${lat.toFixed(5)}, ${lng.toFixed(5)}  (±${Math.round(accuracy)} m)`;
 }
 
 document.getElementById('locate-btn').addEventListener('click', () => {
-  if (!navigator.geolocation) {
-    alert('เบราว์เซอร์ของคุณไม่รองรับ Geolocation'); return;
-  }
-  if (watchId !== null) {
-    if (locMarker) map.panTo(locMarker.getLatLng());
-    return;
-  }
-
+  if (!navigator.geolocation) { alert('เบราว์เซอร์ไม่รองรับ Geolocation'); return; }
+  if (watchId !== null) { if (locMarker) map.panTo(locMarker.getLatLng()); return; }
   document.getElementById('location-info').textContent = 'กำลังระบุตำแหน่ง…';
-
   watchId = navigator.geolocation.watchPosition(
-    pos => {
-      onPosition(pos);
-      if (!locMarker) map.panTo([pos.coords.latitude, pos.coords.longitude]);
-    },
+    pos => { onPosition(pos); if (!locMarker) map.panTo([pos.coords.latitude, pos.coords.longitude]); },
     err => {
-      const msgs = ['', 'กรุณาอนุญาตการเข้าถึงตำแหน่ง', 'ไม่สามารถระบุตำแหน่งได้', 'หมดเวลา'];
-      document.getElementById('location-info').textContent = msgs[err.code] || 'เกิดข้อผิดพลาด';
+      const m = ['','กรุณาอนุญาตการเข้าถึงตำแหน่ง','ไม่สามารถระบุตำแหน่งได้','หมดเวลา'];
+      document.getElementById('location-info').textContent = m[err.code] || 'เกิดข้อผิดพลาด';
       watchId = null;
     },
     { enableHighAccuracy: true, timeout: 15000 }
   );
 });
 
-// ════════════════════════════════════════
-//  Start
-// ════════════════════════════════════════
+// ══════════════════════════════════════════════
+//  8. Tool state
+// ══════════════════════════════════════════════
+let activeTool = null; // 'pin' | 'measure' | null
+
+function toggleTool(name) {
+  if (activeTool === name) {
+    activeTool = null;
+  } else {
+    activeTool = name;
+    if (name === 'pin')     { clearMeasureDrawing(); }
+    if (name === 'measure') { closeAnyPinPopup(); map.doubleClickZoom.disable(); }
+  }
+  if (activeTool !== 'measure') map.doubleClickZoom.enable();
+  map.getContainer().style.cursor = activeTool ? 'crosshair' : '';
+  document.getElementById('btn-pin').classList.toggle('active', activeTool === 'pin');
+  document.getElementById('btn-measure').classList.toggle('active', activeTool === 'measure');
+}
+
+// ══════════════════════════════════════════════
+//  9. Pin tool
+// ══════════════════════════════════════════════
+const userPinsGroup = L.featureGroup().addTo(map);
+let pendingPinLatLng = null;
+
+function closeAnyPinPopup() { map.closePopup(); }
+
+map.on('click', e => {
+  if (activeTool !== 'pin') return;
+  pendingPinLatLng = e.latlng;
+
+  const formId   = 'pf-' + Date.now();
+  const nameId   = 'pn-' + Date.now();
+  const descId   = 'pd-' + Date.now();
+
+  L.popup({ closeButton: true, minWidth: 200 })
+    .setLatLng(e.latlng)
+    .setContent(`
+      <div class="pin-form">
+        <div style="font-weight:700;font-size:13px;margin-bottom:7px;">📌 ปักหมุด</div>
+        <input id="${nameId}" type="text" placeholder="ชื่อจุด" autofocus />
+        <textarea id="${descId}" placeholder="คำอธิบาย (ไม่จำเป็น)"></textarea>
+        <div class="btn-row">
+          <button class="pin-confirm" onclick="confirmPin('${nameId}','${descId}')">✔ ยืนยัน</button>
+          <button class="pin-cancel"  onclick="cancelPin()">ยกเลิก</button>
+        </div>
+      </div>`)
+    .openOn(map);
+
+  setTimeout(() => document.getElementById(nameId)?.focus(), 50);
+});
+
+window.confirmPin = function(nameId, descId) {
+  if (!pendingPinLatLng) return;
+  const name = document.getElementById(nameId)?.value?.trim() || 'หมุด';
+  const desc = document.getElementById(descId)?.value?.trim() || '';
+  map.closePopup();
+
+  const pop = `<div style="min-width:140px">
+    <b>📌 ${name}</b>
+    ${desc ? `<div style="font-size:12px;margin-top:4px;color:#555;">${desc}</div>` : ''}
+    <div style="margin-top:6px;font-size:11px;color:#999;">
+      ${pendingPinLatLng.lat.toFixed(6)}, ${pendingPinLatLng.lng.toFixed(6)}
+    </div>
+    <button onclick="removePinMe(this)" style="margin-top:6px;padding:3px 8px;border:1px solid #e94560;color:#e94560;background:none;border-radius:4px;cursor:pointer;font-size:11px;">🗑 ลบ</button>
+  </div>`;
+
+  const marker = L.marker(pendingPinLatLng, {
+    icon: L.divIcon({
+      className: '',
+      html: `<div style="width:14px;height:14px;background:#e94560;border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>`,
+      iconSize: [14,14], iconAnchor: [7,7]
+    })
+  }).bindPopup(pop).addTo(userPinsGroup).openPopup();
+
+  pendingPinLatLng = null;
+};
+
+window.cancelPin = function() {
+  map.closePopup();
+  pendingPinLatLng = null;
+};
+
+window.removePinMe = function(btn) {
+  const popEl = btn.closest('.leaflet-popup');
+  if (!popEl) return;
+  // Find the marker that owns this popup
+  userPinsGroup.eachLayer(m => {
+    const el = m.getPopup()?.getElement();
+    if (el && popEl.contains(el)) {
+      userPinsGroup.removeLayer(m);
+    }
+  });
+};
+
+// ══════════════════════════════════════════════
+//  10. Measure distance tool
+// ══════════════════════════════════════════════
+let mPoints   = [];
+let mLines    = [];
+let mDots     = [];
+let mTooltips = [];
+let mTotal    = 0;
+let clickTimer = null;
+
+function fmtDist(m) {
+  return m >= 1000 ? `${(m/1000).toFixed(3)} km` : `${Math.round(m)} m`;
+}
+
+map.on('click', e => {
+  if (activeTool !== 'measure') return;
+
+  // Debounce: ignore 2nd click of a dblclick
+  clearTimeout(clickTimer);
+  clickTimer = setTimeout(() => addMeasurePoint(e.latlng), 220);
+});
+
+map.on('dblclick', e => {
+  if (activeTool !== 'measure') return;
+  clearTimeout(clickTimer);
+  // Show finish popup
+  if (mPoints.length >= 2) {
+    L.popup({ closeButton: true })
+      .setLatLng(e.latlng)
+      .setContent(`
+        <div style="text-align:center;padding:4px 6px">
+          <div style="font-size:13px;font-weight:700;margin-bottom:4px;">📏 ระยะทางรวม</div>
+          <div style="font-size:18px;color:#e94560;font-weight:700;">${fmtDist(mTotal)}</div>
+          <div style="font-size:11px;color:#999;margin-top:2px;">${mPoints.length} จุด</div>
+        </div>`)
+      .openOn(map);
+  }
+});
+
+function addMeasurePoint(latlng) {
+  mPoints.push(latlng);
+
+  // Dot
+  const dot = L.circleMarker(latlng, {
+    radius: 5, color: '#ff6600', fillColor: '#ff6600', fillOpacity: 1, weight: 2
+  }).addTo(map);
+  mDots.push(dot);
+
+  if (mPoints.length > 1) {
+    const prev = mPoints[mPoints.length - 2];
+    const seg  = prev.distanceTo(latlng);
+    mTotal += seg;
+
+    // Dashed line
+    const line = L.polyline([prev, latlng], {
+      color: '#ff6600', weight: 2, dashArray: '8,5', opacity: 0.85
+    }).addTo(map);
+    mLines.push(line);
+
+    // Tooltip on this dot showing cumulative distance
+    dot.bindTooltip(`<b>${fmtDist(mTotal)}</b>`, {
+      permanent: true, direction: 'top',
+      className: 'measure-tip', offset: [0, -6]
+    }).openTooltip();
+  } else {
+    dot.bindTooltip('จุดเริ่มต้น', {
+      permanent: true, direction: 'top',
+      className: 'measure-tip', offset: [0, -6]
+    }).openTooltip();
+  }
+
+  document.getElementById('clear-measure-btn').style.display = 'block';
+}
+
+function clearMeasureDrawing() {
+  clearTimeout(clickTimer);
+  mLines.forEach(l => map.removeLayer(l));
+  mDots.forEach(d => map.removeLayer(d));
+  mLines = []; mDots = []; mPoints = []; mTotal = 0;
+  document.getElementById('clear-measure-btn').style.display = 'none';
+  map.closePopup();
+}
+
+window.clearMeasure = function() {
+  clearMeasureDrawing();
+  if (activeTool === 'measure') toggleTool('measure');
+};
+
+// ══════════════════════════════════════════════
+//  11. Start
+// ══════════════════════════════════════════════
 loadAll().catch(err => {
   document.getElementById('loading-state').style.display = 'none';
-  document.getElementById('empty-state').style.display = 'block';
+  document.getElementById('empty-state').style.display   = 'block';
   console.error(err);
 });
 </script>
