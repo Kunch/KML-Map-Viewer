@@ -27,20 +27,6 @@
       "type": "kmz",
       "size": 6670209,
       "uploadedAt": "2026-06-22T12:48:34.398Z"
-    },
-    {
-      "name": "21 Hat Yai Ridge Line - mitrearth.kmz",
-      "path": "data/21 Hat Yai Ridge Line - mitrearth.kmz",
-      "type": "kmz",
-      "size": 13179155,
-      "uploadedAt": "2026-06-22T12:48:43.928Z"
-    },
-    {
-      "name": "Affected Map.kmz",
-      "path": "data/Affected Map.kmz",
-      "type": "kmz",
-      "size": 7038,
-      "uploadedAt": "2026-07-15T23:47:36.330Z"
     }
   ]
 }
